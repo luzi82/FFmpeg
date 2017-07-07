@@ -21,6 +21,7 @@
 #include <VideoToolbox/VideoToolbox.h>
 #include <CoreVideo/CoreVideo.h>
 #include <CoreMedia/CoreMedia.h>
+#include <CoreMediaIO/CMIOHardware.h>
 #include <TargetConditionals.h>
 #include <Availability.h>
 #include "avcodec.h"

@@ -26,6 +26,7 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
+#import <CoreMediaIO/CMIOHardware.h>
 #include <pthread.h>
 
 #include "libavutil/pixdesc.h"
@@ -668,7 +669,18 @@ static int avf_read_header(AVFormatContext *s)
     AVCaptureDevice *video_device = nil;
     AVCaptureDevice *audio_device = nil;
     // Find capture device
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    // NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed];
+
+    CMIOObjectPropertyAddress prop = {
+            kCMIOHardwarePropertyAllowScreenCaptureDevices,
+            kCMIOObjectPropertyScopeGlobal,
+            kCMIOObjectPropertyElementMaster
+    };
+    UInt32 allow = 1;
+    CMIOObjectSetPropertyData(kCMIOObjectSystemObject, &prop, 0, NULL,
+            sizeof(allow), &allow);
+
     ctx->num_video_devices = [devices count];
 
     ctx->first_pts          = av_gettime();
@@ -759,7 +771,8 @@ static int avf_read_header(AVFormatContext *s)
     } else if (ctx->video_filename &&
                strncmp(ctx->video_filename, "none", 4)) {
         if (!strncmp(ctx->video_filename, "default", 7)) {
-            video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+            // video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+            video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeMuxed];
         } else {
         // looking for video inputs
         for (AVCaptureDevice *device in devices) {
