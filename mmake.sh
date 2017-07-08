@@ -33,5 +33,7 @@ set -e
  --disable-libzvbi \
  --disable-version3 \
  --disable-ffplay \
+ --disable-ffprobe \
+ --disable-ffserver \
  --disable-indev=qtkit
 make
