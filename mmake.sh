@@ -4,6 +4,18 @@ set -e
 
 ./configure --cc=/usr/bin/clang \
  --prefix=/opt/ffmpeg \
+ --disable-encoders \
+ --enable-encoder=rawvideo \
+ --disable-decoders \
+ --enable-decoder=rawvideo \
+ --disable-muxers \
+ --enable-muxer=rawvideo \
+ --disable-demuxers \
+ --disable-parsers \
+ --disable-protocols \
+ --enable-protocol=pipe \
+ --disable-filters \
+ --enable-filter=scale \
  --disable-avisynth \
  --disable-fontconfig \
  --disable-gpl \
@@ -36,4 +48,4 @@ set -e
  --disable-ffprobe \
  --disable-ffserver \
  --disable-indev=qtkit
-make
+make -j 3
