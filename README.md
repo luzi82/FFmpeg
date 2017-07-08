@@ -1,3 +1,12 @@
+FFmpeg-iOS capture README
+=========================
+
+This ffmpeg mod is made to capture iOS screen video via USA via AV Foundation.
+This mod contains bad hack so it may break other original ffmpeg function.
+Use it on you own risk.
+
+Use mmake.sh to build.
+
 FFmpeg README
 =============
 
