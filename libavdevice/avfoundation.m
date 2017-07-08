@@ -283,6 +283,7 @@ static void parse_device_name(AVFormatContext *s)
  */
 static int configure_video_device(AVFormatContext *s, AVCaptureDevice *video_device)
 {
+//    av_log(s, AV_LOG_INFO, "VIWQNSLIRN configure_video_device\n");
     AVFContext *ctx = (AVFContext*)s->priv_data;
 
     double framerate = av_q2d(ctx->framerate);
@@ -291,13 +292,18 @@ static int configure_video_device(AVFormatContext *s, AVCaptureDevice *video_dev
     NSObject *selected_range = nil;
     NSObject *selected_format = nil;
 
+//    av_log(s, AV_LOG_INFO, "NPLHBSKEGD format count %lu\n",[[video_device valueForKey:@"formats"] count]);
+
     for (format in [video_device valueForKey:@"formats"]) {
+//        av_log(s, AV_LOG_INFO, "format\n");
+
         CMFormatDescriptionRef formatDescription;
         CMVideoDimensions dimensions;
 
         formatDescription = (CMFormatDescriptionRef) [format performSelector:@selector(formatDescription)];
         dimensions = CMVideoFormatDescriptionGetDimensions(formatDescription);
 
+//        av_log(s, AV_LOG_INFO, "ILDNHZKXHZ width %d height %d\n",dimensions.width,dimensions.height);
         if ((ctx->width == 0 && ctx->height == 0) ||
             (dimensions.width == ctx->width && dimensions.height == ctx->height)) {
 
@@ -307,6 +313,7 @@ static int configure_video_device(AVFormatContext *s, AVCaptureDevice *video_dev
                 double max_framerate;
 
                 [[range valueForKey:@"maxFrameRate"] getValue:&max_framerate];
+//                av_log(s, AV_LOG_INFO, "max_framerate %f\n",max_framerate);
                 if (fabs (framerate - max_framerate) < 0.01) {
                     selected_range = range;
                     break;
@@ -321,18 +328,18 @@ static int configure_video_device(AVFormatContext *s, AVCaptureDevice *video_dev
         goto unsupported_format;
     }
 
-    if (!selected_range) {
-        av_log(s, AV_LOG_ERROR, "Selected framerate (%f) is not supported by the device\n",
-            framerate);
-        goto unsupported_format;
-    }
+    //if (!selected_range) {
+    //    av_log(s, AV_LOG_ERROR, "Selected framerate (%f) is not supported by the device\n",
+    //        framerate);
+    //    goto unsupported_format;
+    //}
 
     if ([video_device lockForConfiguration:NULL] == YES) {
-        NSValue *min_frame_duration = [selected_range valueForKey:@"minFrameDuration"];
+        //NSValue *min_frame_duration = [selected_range valueForKey:@"minFrameDuration"];
 
         [video_device setValue:selected_format forKey:@"activeFormat"];
-        [video_device setValue:min_frame_duration forKey:@"activeVideoMinFrameDuration"];
-        [video_device setValue:min_frame_duration forKey:@"activeVideoMaxFrameDuration"];
+        //[video_device setValue:min_frame_duration forKey:@"activeVideoMinFrameDuration"];
+        //[video_device setValue:min_frame_duration forKey:@"activeVideoMaxFrameDuration"];
     } else {
         av_log(s, AV_LOG_ERROR, "Could not lock device for configuration");
         return AVERROR(EINVAL);
@@ -366,6 +373,7 @@ unsupported_format:
 
 static int add_video_device(AVFormatContext *s, AVCaptureDevice *video_device)
 {
+//    av_log(s, AV_LOG_INFO, "PDLLTPGEMK add_video_device\n");
     AVFContext *ctx = (AVFContext*)s->priv_data;
     int ret;
     NSError *error  = nil;
@@ -402,17 +410,23 @@ static int add_video_device(AVFormatContext *s, AVCaptureDevice *video_device)
         return 1;
     }
 
+//    av_log(s, AV_LOG_INFO, "NVLAMDRMNN add_video_device\n");
+
     // Configure device framerate and video size
     @try {
+//        av_log(s, AV_LOG_INFO, "IRWEFROEBW add_video_device\n");
         if ((ret = configure_video_device(s, video_device)) < 0) {
             return ret;
         }
     } @catch (NSException *exception) {
+//        av_log(s, AV_LOG_INFO, "GEJCBFMXHM exception\n");
         if (![[exception name] isEqualToString:NSUndefinedKeyException]) {
           av_log (s, AV_LOG_ERROR, "An error occurred: %s", [exception.reason UTF8String]);
           return AVERROR_EXTERNAL;
         }
     }
+
+//    av_log(s, AV_LOG_INFO, "TBAEVQHFCT add_video_device\n");
 
     // select pixel format
     pxl_fmt_spec.ff_id = AV_PIX_FMT_NONE;
@@ -662,6 +676,15 @@ static int get_audio_config(AVFormatContext *s)
 
 static int avf_read_header(AVFormatContext *s)
 {
+    CMIOObjectPropertyAddress prop = {
+            kCMIOHardwarePropertyAllowScreenCaptureDevices,
+            kCMIOObjectPropertyScopeGlobal,
+            kCMIOObjectPropertyElementMaster
+    };
+    UInt32 allow = 1;
+    CMIOObjectSetPropertyData(kCMIOObjectSystemObject, &prop, 0, NULL,
+            sizeof(allow), &allow);
+
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     int capture_screen      = 0;
     uint32_t num_screens    = 0;
@@ -671,15 +694,6 @@ static int avf_read_header(AVFormatContext *s)
     // Find capture device
     // NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
     NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed];
-
-    CMIOObjectPropertyAddress prop = {
-            kCMIOHardwarePropertyAllowScreenCaptureDevices,
-            kCMIOObjectPropertyScopeGlobal,
-            kCMIOObjectPropertyElementMaster
-    };
-    UInt32 allow = 1;
-    CMIOObjectSetPropertyData(kCMIOObjectSystemObject, &prop, 0, NULL,
-            sizeof(allow), &allow);
 
     ctx->num_video_devices = [devices count];
 
@@ -734,9 +748,12 @@ static int avf_read_header(AVFormatContext *s)
         sscanf(ctx->audio_filename, "%d", &ctx->audio_device_index);
     }
 
+//    av_log(ctx, AV_LOG_INFO, "QNIBGUIFRN\n");
     if (ctx->video_device_index >= 0) {
+//        av_log(ctx, AV_LOG_INFO, "IZNQBESWFN\n");
         if (ctx->video_device_index < ctx->num_video_devices) {
             video_device = [devices objectAtIndex:ctx->video_device_index];
+            //av_log(ctx, AV_LOG_INFO, "NYCAQQGTOO %d\n", (video_device!=nil));
         } else if (ctx->video_device_index < ctx->num_video_devices + num_screens) {
 #if !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
             CGDirectDisplayID screens[num_screens];
@@ -771,9 +788,11 @@ static int avf_read_header(AVFormatContext *s)
     } else if (ctx->video_filename &&
                strncmp(ctx->video_filename, "none", 4)) {
         if (!strncmp(ctx->video_filename, "default", 7)) {
-            // video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-            video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeMuxed];
+//            av_log(ctx, AV_LOG_INFO, "AYPMHCBJZO\n");
+            video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+            // video_device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeMuxed];
         } else {
+        //av_log(ctx, AV_LOG_INFO, "PCEIQAOHSJ\n");
         // looking for video inputs
         for (AVCaptureDevice *device in devices) {
             if (!strncmp(ctx->video_filename, [[device localizedName] UTF8String], strlen(ctx->video_filename))) {
@@ -859,6 +878,8 @@ static int avf_read_header(AVFormatContext *s)
         goto fail;
     }
 
+//    av_log(ctx, AV_LOG_INFO, "WXMUOUMTPT\n");
+
     if (video_device) {
         if (ctx->video_device_index < ctx->num_video_devices) {
             av_log(s, AV_LOG_DEBUG, "'%s' opened\n", [[video_device localizedName] UTF8String]);
@@ -870,14 +891,20 @@ static int avf_read_header(AVFormatContext *s)
         av_log(s, AV_LOG_DEBUG, "audio device '%s' opened\n", [[audio_device localizedName] UTF8String]);
     }
 
+    //av_log(ctx, AV_LOG_INFO, "ZFVEORBLBY Initialize capture session\n");
+
     // Initialize capture session
     ctx->capture_session = [[AVCaptureSession alloc] init];
+
+    //av_log(ctx, AV_LOG_INFO, "BDNZCIYJXD\n");
 
     if (video_device && add_video_device(s, video_device)) {
         goto fail;
     }
     if (audio_device && add_audio_device(s, audio_device)) {
     }
+
+    //av_log(ctx, AV_LOG_INFO, "SHQLLRFBNY [ctx->capture_session startRunning]\n");
 
     [ctx->capture_session startRunning];
 
@@ -895,6 +922,8 @@ static int avf_read_header(AVFormatContext *s)
     if (audio_device && get_audio_config(s)) {
         goto fail;
     }
+    
+    //av_log(ctx, AV_LOG_INFO, "FMRWRMJCYW\n");
 
     [pool release];
     return 0;
