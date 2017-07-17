@@ -714,7 +714,7 @@ static int avf_read_header(AVFormatContext *s)
         for (AVCaptureDevice *device in devices) {
             const char *name = [[device localizedName] UTF8String];
             index            = [devices indexOfObject:device];
-            av_log(ctx, AV_LOG_INFO, "[%d] %s\n", index, name);
+            av_log(ctx, AV_LOG_INFO, "[v] [%d] [%s]\n", index, name);
             index++;
         }
 #if !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
