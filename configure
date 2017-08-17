@@ -256,6 +256,7 @@ External library support:
   --enable-libtwolame      enable MP2 encoding via libtwolame [no]
   --enable-libv4l2         enable libv4l2/v4l-utils [no]
   --enable-libvidstab      enable video stabilization using vid.stab [no]
+  --enable-libvmaf         enable vmaf filter via libvmaf [no]
   --enable-libvo-amrwbenc  enable AMR-WB encoding via libvo-amrwbenc [no]
   --enable-libvorbis       enable Vorbis en/decoding via libvorbis,
                            native implementation exists [no]
@@ -1467,6 +1468,7 @@ EXAMPLE_LIST="
     filtering_audio_example
     filtering_video_example
     http_multiclient_example
+    hw_decode_example
     metadata_example
     muxing_example
     qsvdec_example
@@ -1569,6 +1571,7 @@ EXTERNAL_LIBRARY_LIST="
     libtheora
     libtwolame
     libv4l2
+    libvmaf
     libvorbis
     libvpx
     libwavpack
@@ -2069,6 +2072,7 @@ HAVE_LIST="
     sndio
     texi2html
     threads
+    uwp
     vaapi_drm
     vaapi_x11
     vdpau_x11
@@ -2400,6 +2404,7 @@ dds_decoder_select="texturedsp"
 dirac_decoder_select="dirac_parse dwt golomb videodsp mpegvideoenc"
 dnxhd_decoder_select="blockdsp idctdsp"
 dnxhd_encoder_select="aandcttables blockdsp fdctdsp idctdsp mpegvideoenc pixblockdsp"
+dolby_e_decoder_select="mdct"
 dvvideo_decoder_select="dvprofile idctdsp"
 dvvideo_encoder_select="dvprofile fdctdsp me_cmp pixblockdsp"
 dxa_decoder_select="zlib"
@@ -3186,6 +3191,7 @@ uspp_filter_deps="gpl avcodec"
 vaguedenoiser_filter_deps="gpl"
 vidstabdetect_filter_deps="libvidstab"
 vidstabtransform_filter_deps="libvidstab"
+libvmaf_filter_deps="libvmaf"
 zmq_filter_deps="libzmq"
 zoompan_filter_deps="swscale"
 zscale_filter_deps="libzimg"
@@ -3204,6 +3210,7 @@ filter_audio_example_deps="avfilter avutil"
 filtering_audio_example_deps="avfilter avcodec avformat avutil"
 filtering_video_example_deps="avfilter avcodec avformat avutil"
 http_multiclient_example_deps="avformat avutil fork"
+hw_decode_example_deps="avcodec avformat avutil"
 metadata_example_deps="avformat avutil"
 muxing_example_deps="avcodec avformat avutil swscale"
 qsvdec_example_deps="avcodec avutil libmfx h264_qsv_decoder"
@@ -5841,7 +5848,8 @@ enabled fontconfig        && enable libfontconfig
 enabled libfontconfig     && require_pkg_config fontconfig "fontconfig/fontconfig.h" FcInit
 enabled libfreetype       && require_pkg_config freetype2 "ft2build.h FT_FREETYPE_H" FT_Init_FreeType
 enabled libfribidi        && require_pkg_config fribidi fribidi.h fribidi_version_info
-enabled libgme            && require  libgme gme/gme.h gme_new_emu -lgme -lstdc++
+enabled libgme            && { use_pkg_config libgme gme/gme.h gme_new_emu ||
+                               require libgme gme/gme.h gme_new_emu -lgme -lstdc++; }
 enabled libgsm            && { for gsm_hdr in "gsm.h" "gsm/gsm.h"; do
                                    check_lib libgsm "${gsm_hdr}" gsm_create -lgsm && break;
                                done || die "ERROR: libgsm not found"; }
@@ -5901,6 +5909,8 @@ enabled libtwolame        && require libtwolame twolame.h twolame_init -ltwolame
                                die "ERROR: libtwolame must be installed and version must be >= 0.3.10"; }
 enabled libv4l2           && require_pkg_config libv4l2 libv4l2.h v4l2_ioctl
 enabled libvidstab        && require_pkg_config "vidstab >= 0.98" vid.stab/libvidstab.h vsMotionDetectInit
+enabled libvmaf           && { check_lib libvmaf "libvmaf.h" "compute_vmaf" -lvmaf -lstdc++ -lpthread -lm ||
+                               die "ERROR: libvmaf must be installed"; }
 enabled libvo_amrwbenc    && require libvo_amrwbenc vo-amrwbenc/enc_if.h E_IF_init -lvo-amrwbenc
 enabled libvorbis         && require_pkg_config vorbis vorbis/codec.h vorbis_info_init &&
                              require_pkg_config vorbisenc vorbis/vorbisenc.h vorbis_encode_init
@@ -6125,7 +6135,18 @@ check_func_headers "windows.h" CreateDIBSection "$gdigrab_indev_extralibs"
 
 # d3d11va requires linking directly to dxgi and d3d11 if not building for
 # the desktop api partition
-enabled LoadLibrary || d3d11va_extralibs="-ldxgi -ld3d11"
+check_cpp <<EOF && enable uwp && d3d11va_extralibs="-ldxgi -ld3d11"
+#ifdef WINAPI_FAMILY
+#include <winapifamily.h>
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#error desktop, not uwp
+#else
+// WINAPI_FAMILY_APP, WINAPI_FAMILY_PHONE_APP => UWP
+#endif
+#else
+#error no family set
+#endif
+EOF
 
 enabled vaapi &&
     check_lib vaapi va/va.h vaInitialize -lva
