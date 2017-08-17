@@ -5,7 +5,19 @@ This ffmpeg mod is made to capture iOS screen video via USA via AV Foundation.
 This mod contains bad hack so it may break other original ffmpeg function.
 Use it on you own risk.
 
+## Build
+
 Use mmake.sh to build.
+
+## List iOS devices
+
+`./ffmpeg -f avfoundation -list_devices true -i ""`
+
+## Stream iOS screen to ffplay
+
+Assume device name is DEVICE_NAME, scale video size to 120x213.  Download ffplay from ffmpeg official site.
+
+`./ffmpeg -f avfoundation -pixel_format uyvy422 -i "DEVICE_NAME:none" -vsync 2 -an -vf scale=120:213 -pix_fmt bgr0 -f rawvideo - | ~/bin/ffplay -f rawvideo -framerate 100 -pixel_format bgr0 -video_size 120x213 -`
 
 FFmpeg README
 =============
